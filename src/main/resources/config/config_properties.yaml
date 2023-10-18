@@ -1,0 +1,10 @@
+sftp:
+  host: "255.255.255.255"
+  port: "22"
+  user: "mule"
+  password: "mule"
+  file: "/home/mule/ftp/sample-invoice.jpg"
+salesforce:
+  user: "abc@def.xyz"
+  password: "password"
+  token: "xxxxxxxxxx"

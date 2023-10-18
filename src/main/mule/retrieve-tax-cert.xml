@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:sftp="http://www.mulesoft.org/schema/mule/sftp" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd  http://www.mulesoft.org/schema/mule/sftp http://www.mulesoft.org/schema/mule/sftp/current/mule-sftp.xsd http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+    <http:listener-config name="retrieve-tax-cert-httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="8081" />
+    </http:listener-config>
+    <apikit:config name="retrieve-tax-cert-config" api="resource::49805047-e32b-4d48-a546-c23ca53892bb:retrieve-tax-cert:3.0.0:raml:zip:retrieve-tax-cert.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <sftp:config name="SFTP_Config" doc:name="SFTP Config" doc:id="11d3ba3d-fd97-4bb8-8b32-74714448c8f4">
+        <sftp:connection host="${sftp.host}" username="${sftp.user}" password="${sftp.password}" port="${sftp.port}"/>
+    </sftp:config>
+    <salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="b11936b2-e0cb-402a-87e0-7d11136bf945">
+        <salesforce:basic-connection username="${salesforce.user}" password="${salesforce.password}" securityToken="${salesforce.token}" />
+    </salesforce:sfdc-config>
+    <configuration-properties doc:name="Configuration properties" doc:id="2998662e-022c-4922-835c-6ecd3cb0ab55" file="config\config_properties.yaml" />
+	<flow name="retrieve-tax-cert-main">
+        <http:listener config-ref="retrieve-tax-cert-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <logger level="INFO" doc:name="Logger" doc:id="f8fefdf5-cacd-4bdb-bc03-ca21a209d657" message="#[attributes]" />
+        <apikit:router config-ref="retrieve-tax-cert-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="retrieve-tax-cert-console">
+        <http:listener config-ref="retrieve-tax-cert-httpListenerConfig" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="retrieve-tax-cert-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="get:\tax-cert:retrieve-tax-cert-config">
+        <set-variable value="#[attributes.queryParams.salesforce_case_id]" doc:name="Set Case Id" doc:id="6cf14cae-c663-4b9f-a678-c80f05704016" variableName="case_id" />
+        <sftp:read doc:id="1ce6368e-44bd-4e02-8ab7-93cb267baf17" config-ref="SFTP_Config" path="${sftp.file}" doc:name="Read" />
+        <ee:transform doc:name="Map File to ContentVersion Object" doc:id="9d66f003-e8b8-4cdf-a097-a4975435e6b0">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+import * from dw::core::Binaries
+output application/java
+---
+[{
+    PathOnClient: "tax-residence-cert.jpg",
+    VersionData: payload as Binary {
+        class: "byte[]"
+    }
+}]]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <salesforce:upsert objectType="ContentVersion" doc:id="c1ce8286-8e5a-43aa-b13d-0a51df6d8676" config-ref="Salesforce_Config" doc:name="Upload File" externalIdFieldName="Id" />
+        <salesforce:query doc:id="6c0a451c-41c0-4249-865b-e32555985cc5" config-ref="Salesforce_Config" doc:name="Get Content Document Id">
+            <salesforce:salesforce-query><![CDATA[SELECT ContentDocumentId FROM ContentVersion WHERE Id = ':cvId']]></salesforce:salesforce-query>
+            <salesforce:parameters><![CDATA[#[output application/java
+---
+{
+	"cvId" : payload.items[0].id
+}]]]></salesforce:parameters>
+        </salesforce:query>
+        <ee:transform doc:name="Map Document Link" doc:id="5e060e68-20e0-43fc-aeec-ebe02a0f6238">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload map ( payload01 , indexOfPayload01 ) -> {
+    LinkedEntityId: vars.case_id,
+    ContentDocumentId: payload01.ContentDocumentId
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <salesforce:upsert objectType="ContentDocumentLink" externalIdFieldName="Id" doc:id="3f97ae65-2631-4c7e-8256-debc2ac4d352" config-ref="Salesforce_Config" doc:name="Create Content Document Link" />
+        <logger level="INFO" doc:name="Logger" doc:id="7da37772-e483-4b71-a65b-8ba3fd7f2be7" message='#[output application/json --- "Upload Complete"]' />
+    </flow>
+</mule>
